@@ -1,0 +1,17 @@
+{
+    "manifest_version": 3,
+    "name": "Privacy Policy Extractor",
+    "description": "Extracts privacy policies from websites.",
+    "version": "1.0",
+    "action": {
+        "default_popup": "index.html"
+    },
+    "permissions": [
+        "activeTab",
+        "scripting"
+    ],
+    "host_permissions": [
+        "https://*/*",
+        "http://*/*"
+    ]
+}
