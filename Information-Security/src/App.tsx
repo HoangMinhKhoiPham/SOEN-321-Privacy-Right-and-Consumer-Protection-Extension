@@ -1,91 +1,219 @@
 import { useState } from "react";
 import "./App.css";
 
-type AnalysisData = {
-  category: string;
-  score: number;
-  description: string;
+const categories = [
+  "dataCollection",
+  "dataSharing",
+  "userChoice",
+  "dataSecurity",
+  "dataDeletion",
+  "policyUpdate",
+  "dataRetention",
+  "internationalAudiences",
+  "children",
+  "miscellaneous",
+  "doNotTrack",
+  "contactInformation",
+];
+
+const labels: Record<string, string> = {
+  dataCollection: "Data Collection",
+  dataSharing: "Data Sharing",
+  userChoice: "User Choice",
+  dataSecurity: "Data Security",
+  dataDeletion: "Data Deletion",
+  policyUpdate: "Policy Update",
+  dataRetention: "Data Retention",
+  internationalAudiences: "International Audiences",
+  children: "Children",
+  miscellaneous: "Miscellaneous",
+  doNotTrack: "Do Not Track",
+  contactInformation: "Contact Information",
 };
 
-type Result = {
-  title: string;
-  data: AnalysisData[];
-} | null;
+const generatePrompt = (text: string) => `
+You are an assistant designed to analyze privacy policies. Analyze the following privacy policy text and provide a JSON output.
+
+Score the following categories (1-10) and provide detailed descriptions for each category:
+1. Data Collection
+2. Data Sharing
+3. User Choice
+4. Data Security
+5. Data Deletion
+6. Policy Update
+7. Data Retention
+8. International Audiences
+9. Children
+10. Miscellaneous
+11. Do Not Track
+12. Contact Information
+
+Output format:
+{
+  "scores": {
+    "dataCollection": 10,
+    "dataSharing": 8,
+    "userChoice": 7,
+    ...
+  },
+  "description": {
+    "dataCollection": "Explanation for Data Collection score.",
+    "dataSharing": "Explanation for Data Sharing score.",
+    ...
+  }
+}
+
+Analyze this text:
+"${text}"
+Return only valid JSON and nothing else.
+`;
+
+interface IResponse {
+  scores: Record<string, number>;
+  description: Record<string, string>;
+}
 
 function App() {
+  const [, setIsScanning] = useState(false);
+  const [state, setState] = useState<"error" | "found" | "not found" | "">("");
+  const [response, setResponse] = useState<IResponse>();
+  const [total, setTotal] = useState<number>();
   const [activeTab, setActiveTab] = useState("scan");
-  const [result, setResult] = useState<Result>(null);
-  const [url, setUrl] = useState("");
 
-  const analyzePage = () => {
-    setResult({
-      title: "Current Page Analysis",
-      data: [
-        { category: "Data Collection", score: 85, description: "The service collects user data for improving user experience." },
-        { category: "Data Sharing", score: 70, description: "User data is shared with advertising and analytics providers." },
-        { category: "User Choice", score: 90, description: "Users can opt-out through settings and manage preferences." },
-        { category: "Data Security", score: 95, description: "256-bit encryption and regular security audits ensure data protection." },
-        { category: "Data Deletion", score: 80, description: "Users can delete data via account settings or requests." },
-        { category: "Policy Update", score: 75, description: "Policy updates are communicated via email and in-app notifications." },
-        { category: "Data Retention", score: 65, description: "User data is retained for up to 5 years of inactivity." },
-        { category: "International Audiences", score: 88, description: "Complies with GDPR, CCPA, and other international standards." },
-        { category: "Children", score: 95, description: "Service complies with COPPA and avoids data collection from underage users." },
-        { category: "Miscellaneous", score: 78, description: "Covers cookie policies and additional disclaimers." },
-        { category: "Do Not Track", score: 60, description: "The service does not honor 'Do Not Track' signals." },
-        { category: "Contact Information", score: 92, description: "Provides contact details, including DPO email and phone number." },
-      ],
+  const extractTextFromPage = async (): Promise<string> => {
+    return new Promise<string>((resolve, reject) => {
+      chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+        if (!tabs[0]?.id) return reject("No active tab found.");
+
+        chrome.scripting.executeScript(
+          {
+            target: { tabId: tabs[0].id },
+            func: () => document.body.innerText || "",
+          },
+          (results) => {
+            if (chrome.runtime.lastError) {
+              console.error(chrome.runtime.lastError);
+              return reject("Failed to extract text from the page.");
+            }
+            resolve(results[0]?.result || "");
+          }
+        );
+      });
     });
-    setActiveTab("result");
   };
 
-  const analyzeUrl = () => {
-    if (!url) {
-      alert("Please enter a valid URL.");
-      return;
+  const manualParseResponse = (response: string): IResponse | null => {
+    try {
+      const lines = response.split("\n").filter((line) => line.trim());
+
+      const scores: Record<string, number> = {};
+      const descriptions: Record<string, string> = {};
+
+      let currentCategory = "";
+
+      for (const line of lines) {
+        const scoreMatch = line.match(/^(\d+)\.\s+([\w\s]+):\s+(\d+)\/10/);
+        if (scoreMatch) {
+          const [, , categoryName, score] = scoreMatch;
+          currentCategory = categoryName
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, "");
+          scores[currentCategory] = parseInt(score, 10);
+          continue;
+        }
+
+        if (currentCategory) {
+          descriptions[currentCategory] =
+            (descriptions[currentCategory] || "") + " " + line.trim();
+        }
+      }
+
+      const mappedScores: Record<string, number> = {};
+      const mappedDescriptions: Record<string, string> = {};
+
+      for (const category of categories) {
+        mappedScores[category] = scores[category] || 0;
+        mappedDescriptions[category] =
+          descriptions[category] || "No details provided.";
+      }
+
+      return {
+        scores: mappedScores,
+        description: mappedDescriptions,
+      };
+    } catch (error) {
+      console.error("Error during manual parsing:", error);
+      return null;
     }
-    setResult({
-      title: `Analysis for URL: ${url}`,
-      data: [
-        { category: "Data Collection", score: 85, description: "The service collects user data for improving user experience." },
-        { category: "Data Sharing", score: 70, description: "User data is shared with advertising and analytics providers." },
-        { category: "User Choice", score: 90, description: "Users can opt-out through settings and manage preferences." },
-        { category: "Data Security", score: 95, description: "256-bit encryption and regular security audits ensure data protection." },
-        { category: "Data Deletion", score: 80, description: "Users can delete data via account settings or requests." },
-        { category: "Policy Update", score: 75, description: "Policy updates are communicated via email and in-app notifications." },
-        { category: "Data Retention", score: 65, description: "User data is retained for up to 5 years of inactivity." },
-        { category: "International Audiences", score: 88, description: "Complies with GDPR, CCPA, and other international standards." },
-        { category: "Children", score: 95, description: "Service complies with COPPA and avoids data collection from underage users." },
-        { category: "Miscellaneous", score: 78, description: "Covers cookie policies and additional disclaimers." },
-        { category: "Do Not Track", score: 60, description: "The service does not honor 'Do Not Track' signals." },
-        { category: "Contact Information", score: 92, description: "Provides contact details, including DPO email and phone number." },
-      ],
-    });
-    setActiveTab("result");
   };
 
-  const analyzePdf = (file: File | null) => {
-    if (!file) {
-      alert("Please upload a PDF file.");
-      return;
+  const analyzePage = async () => {
+    setIsScanning(true);
+    try {
+      const text = await extractTextFromPage();
+      if (!text) {
+        setState("not found");
+        return;
+      }
+
+      const apiUrl = "https://api.openai.com/v1/chat/completions";
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_APP_OPENAI_API_KEY}`,
+      };
+
+      const body = JSON.stringify({
+        model: "gpt-4",
+        messages: [
+          {
+            role: "user",
+            content: generatePrompt(text),
+          },
+        ],
+      });
+
+      const response = await fetch(apiUrl, { method: "POST", headers, body });
+      const data = await response.json();
+
+      console.log("Raw OpenAI Response:", data);
+
+      const responseContent = data.choices[0]?.message?.content || "";
+
+      let parsedJson: IResponse | null = null;
+
+      try {
+        parsedJson = JSON.parse(responseContent);
+      } catch {
+        console.warn(
+          "Response is not valid JSON. Attempting manual parsing..."
+        );
+        parsedJson = manualParseResponse(responseContent);
+      }
+
+      if (!parsedJson) {
+        console.error("Failed to parse OpenAI response.");
+        setState("error");
+        return;
+      }
+
+      setResponse(parsedJson);
+      setState("found");
+
+      const total = parseFloat(
+        (
+          (categories.reduce((sum, c) => sum + parsedJson.scores[c], 0) /
+            categories.length) *
+          10
+        ).toPrecision(3)
+      );
+      setTotal(total);
+    } catch (error) {
+      console.error("Error analyzing page:", error);
+      setState("error");
+    } finally {
+      setIsScanning(false);
     }
-    setResult({
-      title: `PDF Analysis for: ${file.name}`,
-      data: [
-        { category: "Data Collection", score: 85, description: "The service collects user data for improving user experience." },
-        { category: "Data Sharing", score: 70, description: "User data is shared with advertising and analytics providers." },
-        { category: "User Choice", score: 90, description: "Users can opt-out through settings and manage preferences." },
-        { category: "Data Security", score: 95, description: "256-bit encryption and regular security audits ensure data protection." },
-        { category: "Data Deletion", score: 80, description: "Users can delete data via account settings or requests." },
-        { category: "Policy Update", score: 75, description: "Policy updates are communicated via email and in-app notifications." },
-        { category: "Data Retention", score: 65, description: "User data is retained for up to 5 years of inactivity." },
-        { category: "International Audiences", score: 88, description: "Complies with GDPR, CCPA, and other international standards." },
-        { category: "Children", score: 95, description: "Service complies with COPPA and avoids data collection from underage users." },
-        { category: "Miscellaneous", score: 78, description: "Covers cookie policies and additional disclaimers." },
-        { category: "Do Not Track", score: 60, description: "The service does not honor 'Do Not Track' signals." },
-        { category: "Contact Information", score: 92, description: "Provides contact details, including DPO email and phone number." },
-      ],
-    });
-    setActiveTab("result");
   };
 
   return (
@@ -96,127 +224,41 @@ function App() {
       </header>
 
       <div className="main-content">
-        {activeTab === "scan" && (
+        {state === "found" && response && total ? (
+          <div className="result-container">
+            <button className="back-button" onClick={() => setState("")}>
+              Back
+            </button>
+            <h2>Overall Score: {total}%</h2>
+            <div className="metrics-grid">
+              {categories.map((c) => (
+                <div key={c} className="metric-item">
+                  <h4>{labels[c]}</h4>
+                  <p>Score: {response.scores[c]}</p>
+                  <p>{response.description[c]}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : state === "not found" ? (
+          <p>No privacy policy found on this page.</p>
+        ) : (
           <div>
-            <button className="option-button" onClick={analyzePage}>
-              Scan Current Page
-            </button>
+            {activeTab === "scan" && (
+              <button className="option-button" onClick={analyzePage}>
+                Scan Current Page
+              </button>
+            )}
           </div>
         )}
-
-        {activeTab === "url" && (
-          <div className="input-container">
-            <input
-              type="url"
-              placeholder="Enter URL"
-              className="input-field"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-            />
-            <button className="input-button" onClick={analyzeUrl}>
-              Check URL
-            </button>
-          </div>
-        )}
-
-        {activeTab === "pdf" && (
-          <div className="upload-container">
-            <input
-              type="file"
-              accept="application/pdf"
-              className="file-input"
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  analyzePdf(e.target.files[0]);
-                }
-              }}
-            />
-            <button className="upload-button" onClick={() => alert("Please upload a PDF.")}>
-              Upload PDF
-            </button>
-          </div>
-        )}
-
-        {activeTab === "result" && result && <ResultPage result={result} onBack={() => setActiveTab("scan")} />}
       </div>
 
-      {activeTab !== "result" && (
+      {state === "" && (
         <nav className="bottom-nav">
-          <button
-            className={`nav-button ${activeTab === "scan" ? "active" : ""}`}
-            onClick={() => {
-              setActiveTab("scan");
-              setResult(null);
-            }}
-          >
-            <span className="nav-icon">🔍</span>
-            <span className="nav-text">Scan</span>
-          </button>
-          <button
-            className={`nav-button ${activeTab === "url" ? "active" : ""}`}
-            onClick={() => {
-              setActiveTab("url");
-              setResult(null);
-            }}
-          >
-            <span className="nav-icon">🌐</span>
-            <span className="nav-text">URL</span>
-          </button>
-          <button
-            className={`nav-button ${activeTab === "pdf" ? "active" : ""}`}
-            onClick={() => {
-              setActiveTab("pdf");
-              setResult(null);
-            }}
-          >
-            <span className="nav-icon">📄</span>
-            <span className="nav-text">PDF</span>
-          </button>
+          <button onClick={() => setActiveTab("scan")}>🔍 Scan</button>
+          <button onClick={() => setActiveTab("url")}>🌐 URL</button>
         </nav>
       )}
-    </div>
-  );
-}
-
-type ResultPageProps = {
-  result: Result;
-  onBack: () => void;
-};
-function ResultPage({ result, onBack }: ResultPageProps) {
-  if (!result) return null;
-
-  const overallScore =
-    Math.round(result.data.reduce((sum, item) => sum + item.score, 0) / result.data.length);
-
-  return (
-    <div className="result-container">
-      <button className="back-button" onClick={onBack}>
-        Back
-      </button>
-      <div className="top-metrics">
-        <div className="circle-metric">
-          <div className="circle" style={{ borderColor: overallScore >= 90 ? "#4caf50" : "#ff9800" }}>
-            {overallScore}
-          </div>
-          <p>Overall Score</p>
-        </div>
-      </div>
-
-      <h3>Details</h3>
-      <div className="metrics-grid">
-        {result.data.map((item: AnalysisData, index: number) => (
-          <div key={index} className="metric-item">
-            <h4>{item.category}</h4>
-            <div
-              className="metric-score"
-              style={{ color: item.score >= 90 ? "#4caf50" : item.score >= 50 ? "#ff9800" : "#f44336" }}
-            >
-              {item.score}%
-            </div>
-            <p>{item.description}</p>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
