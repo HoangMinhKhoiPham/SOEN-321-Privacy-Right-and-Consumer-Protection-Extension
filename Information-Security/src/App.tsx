@@ -80,6 +80,78 @@ function App() {
   const [total, setTotal] = useState<number>();
   const [activeTab, setActiveTab] = useState("scan");
 
+  const handleFileUpload = async (file: File) => {
+    try {
+      const text = await file.text();
+      analyzeText(text);
+    } catch (error) {
+      console.error("Failed to read the file:", error);
+      setState("error");
+    }
+  };
+
+  const analyzeText = async (text: string) => {
+    setIsScanning(true);
+    try {
+      const apiUrl = "https://api.openai.com/v1/chat/completions";
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_APP_OPENAI_API_KEY}`,
+      };
+
+      const body = JSON.stringify({
+        model: "gpt-4",
+        messages: [
+          {
+            role: "user",
+            content: generatePrompt(text),
+          },
+        ],
+      });
+
+      const response = await fetch(apiUrl, { method: "POST", headers, body });
+      const data = await response.json();
+
+      console.log("Raw OpenAI Response:", data);
+
+      const responseContent = data.choices[0]?.message?.content || "";
+
+      let parsedJson: IResponse | null = null;
+
+      try {
+        parsedJson = JSON.parse(responseContent);
+      } catch {
+        console.warn(
+          "Response is not valid JSON. Attempting manual parsing..."
+        );
+        parsedJson = manualParseResponse(responseContent);
+      }
+
+      if (!parsedJson) {
+        console.error("Failed to parse OpenAI response.");
+        setState("error");
+        return;
+      }
+
+      setResponse(parsedJson);
+      setState("found");
+
+      const total = parseFloat(
+        (
+          (categories.reduce((sum, c) => sum + parsedJson.scores[c], 0) /
+            categories.length) *
+          10
+        ).toPrecision(3)
+      );
+      setTotal(total);
+    } catch (error) {
+      console.error("Error analyzing text:", error);
+      setState("error");
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   const extractTextFromPage = async (): Promise<string> => {
     return new Promise<string>((resolve, reject) => {
       chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
@@ -249,14 +321,27 @@ function App() {
                 Scan Current Page
               </button>
             )}
+            {activeTab === "upload" && (
+              <div>
+                <input
+                  type="file"
+                  accept=".txt,.docx,.pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file);
+                  }}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {state === "" && (
         <nav className="bottom-nav">
-          <button onClick={() => setActiveTab("scan")}>🔍 Scan</button>
+          <button onClick={() => setActiveTab("scan")}>🔍 Analyze</button>
           <button onClick={() => setActiveTab("url")}>🌐 URL</button>
+          <button onClick={() => setActiveTab("upload")}>📄 Upload</button>
         </nav>
       )}
     </div>
