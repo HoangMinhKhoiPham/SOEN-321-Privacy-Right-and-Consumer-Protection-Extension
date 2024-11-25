@@ -74,7 +74,7 @@ interface IResponse {
 }
 
 function App() {
-  const [, setIsScanning] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const [state, setState] = useState<"error" | "found" | "not found" | "">("");
   const [response, setResponse] = useState<IResponse>();
   const [total, setTotal] = useState<number>();
@@ -290,59 +290,68 @@ function App() {
 
   return (
     <div className="container">
-      <header className="header">
-        <h1>Policy Check Extension</h1>
-        <p>Analyze privacy policies effortlessly!</p>
-      </header>
+      {isScanning ? (
+        <div className="loading-screen">
+          <div className="spinner"></div>
+          <p>Analyzing... Please wait.</p>
+        </div>
+      ) : (
+        <>
+          <header className="header">
+            <h1>Policy Check Extension</h1>
+            <p>Analyze privacy policies effortlessly!</p>
+          </header>
 
-      <div className="main-content">
-        {state === "found" && response && total ? (
-          <div className="result-container">
-            <button className="back-button" onClick={() => setState("")}>
-              Back
-            </button>
-            <h2>Overall Score: {total}%</h2>
-            <div className="metrics-grid">
-              {categories.map((c) => (
-                <div key={c} className="metric-item">
-                  <h4>{labels[c]}</h4>
-                  <p>Score: {response.scores[c]}</p>
-                  <p>{response.description[c]}</p>
+          <div className="main-content">
+            {state === "found" && response && total ? (
+              <div className="result-container">
+                <button className="back-button" onClick={() => setState("")}>
+                  Back
+                </button>
+                <h2>Overall Score: {total}%</h2>
+                <div className="metrics-grid">
+                  {categories.map((c) => (
+                    <div key={c} className="metric-item">
+                      <h4>{labels[c]}</h4>
+                      <p>Score: {response.scores[c]}</p>
+                      <p>{response.description[c]}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-        ) : state === "not found" ? (
-          <p>No privacy policy found on this page.</p>
-        ) : (
-          <div>
-            {activeTab === "scan" && (
-              <button className="option-button" onClick={analyzePage}>
-                Scan Current Page
-              </button>
-            )}
-            {activeTab === "upload" && (
+              </div>
+            ) : state === "not found" ? (
+              <p>No privacy policy found on this page.</p>
+            ) : (
               <div>
-                <input
-                  type="file"
-                  accept=".txt,.docx,.pdf"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileUpload(file);
-                  }}
-                />
+                {activeTab === "scan" && (
+                  <button className="option-button" onClick={analyzePage}>
+                    Scan Current Page
+                  </button>
+                )}
+                {activeTab === "upload" && (
+                  <div>
+                    <input
+                      type="file"
+                      accept=".txt,.docx,.pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileUpload(file);
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
-      </div>
 
-      {state === "" && (
-        <nav className="bottom-nav">
-          <button onClick={() => setActiveTab("scan")}>🔍 Analyze</button>
-          <button onClick={() => setActiveTab("url")}>🌐 URL</button>
-          <button onClick={() => setActiveTab("upload")}>📄 Upload</button>
-        </nav>
+          {state === "" && (
+            <nav className="bottom-nav">
+              <button onClick={() => setActiveTab("scan")}>🔍 Analyze</button>
+              <button onClick={() => setActiveTab("url")}>🌐 URL</button>
+              <button onClick={() => setActiveTab("upload")}>📄 Upload</button>
+            </nav>
+          )}
+        </>
       )}
     </div>
   );
