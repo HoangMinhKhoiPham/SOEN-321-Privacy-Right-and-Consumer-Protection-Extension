@@ -78,6 +78,7 @@ function App() {
   const [state, setState] = useState<"error" | "found" | "not found" | "">("");
   const [response, setResponse] = useState<IResponse>();
   const [total, setTotal] = useState<number>();
+  const [url, setUrl] = useState("");
   const [activeTab, setActiveTab] = useState("scan");
 
   const handleFileUpload = async (file: File) => {
@@ -308,7 +309,14 @@ function App() {
                 <button className="back-button" onClick={() => setState("")}>
                   Back
                 </button>
-                <h2>Overall Score: {total}%</h2>
+                <div className="top-metrics">
+                  <div className="circle-metric">
+                    <div className="circle" style={{ borderColor: total >= 90 ? "#4caf50" : "#ff9800" }}>
+                      {total} %
+                    </div>
+                    <p>Overall Score</p>
+                  </div>
+                </div>
                 <div className="metrics-grid">
                   {categories.map((c) => (
                     <div key={c} className="metric-item">
@@ -328,6 +336,21 @@ function App() {
                     Scan Current Page
                   </button>
                 )}
+                {activeTab === "url" && (
+                  <div className="input-container">
+                    <input
+                      type="url"
+                      placeholder="Enter URL"
+                      className="input-field"
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
+                    />
+                    <button className="input-button" onClick={analyzePage}>
+                      Check URL
+                    </button>
+                  </div>
+                )}
+
                 {activeTab === "upload" && (
                   <div>
                     <input
