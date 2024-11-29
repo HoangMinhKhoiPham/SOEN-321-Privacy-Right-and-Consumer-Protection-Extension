@@ -3,69 +3,43 @@ import "./App.css";
 import {
   categories,
   labels,
-  fetchApi,
-  extractTextFromPage,
+  extractTextFromPrivacyPage,
   IResponse,
-} from "./utils/apiUtils"; // Import the utility functions
+} from "./utils/apiUtils"; // Import the updated utility functions
 
 function App() {
   const [isScanning, setIsScanning] = useState(false);
-  const [state, setState] = useState<"error" | "found" | "not found" | "">("");
-  const [response, setResponse] = useState<IResponse | null>(null);
-  const [total, setTotal] = useState<number | null>(null);
+  const [state, setState] = useState<"error" | "found" | "not found" | "links found" | "">("");
+  const [response] = useState<IResponse | null>(null);
+  const [total] = useState<number | null>(null);
   const [url, setUrl] = useState("");
   const [activeTab, setActiveTab] = useState("scan");
-
-  const handleFileUpload = async (file: File) => {
-    try {
-      const text = await file.text();
-      await analyzeText(text);
-    } catch (error) {
-      console.error("Failed to read the file:", error);
-      setState("error");
-    }
-  };
-
-  const analyzeText = async (text: string) => {
-    setIsScanning(true);
-    const parsedJson = await fetchApi(text);
-    if (parsedJson) {
-      setResponse(parsedJson);
-      setState("found");
-
-      const totalScore = categories.reduce(
-        (sum, category) => sum + parsedJson.scores[category],
-        0
-      );
-      setTotal(((totalScore / categories.length) * 10).toFixed(2) as unknown as number);
-    } else {
-      setState("error");
-    }
-    setIsScanning(false);
-  };
 
   const analyzePage = async () => {
     setIsScanning(true);
     try {
-      const text = await extractTextFromPage();
-      if (!text) {
+      // Step 3: Send a background request to fetch the page content
+      // Instead of navigating to the privacy page, we'll extract the content behind the scenes.
+      const pageText = await extractTextFromPrivacyPage();
+      if (!pageText) {
         setState("not found");
         return;
       }
+      console.log("API:", pageText)
+      // Step 4: Send the extracted content to OpenAI for analysis
+      // const parsedJson = await fetchApi(pageText);
+      // if (parsedJson) {
+      //   setResponse(parsedJson);
+      //   setState("found");
 
-      const parsedJson = await fetchApi(text);
-      if (parsedJson) {
-        setResponse(parsedJson);
-        setState("found");
-
-        const totalScore = categories.reduce(
-          (sum, category) => sum + parsedJson.scores[category],
-          0
-        );
-        setTotal(((totalScore / categories.length) * 10).toFixed(2) as unknown as number);
-      } else {
-        setState("error");
-      }
+      //   const totalScore = categories.reduce(
+      //     (sum, category) => sum + parsedJson.scores[category],
+      //     0
+      //   );
+      //   setTotal(((totalScore / categories.length) * 10).toFixed(2) as unknown as number);
+      // } else {
+      //   setState("error");
+      // }
     } catch (error) {
       console.error("Error analyzing page:", error);
       setState("error");
@@ -119,6 +93,8 @@ function App() {
               </div>
             ) : state === "not found" ? (
               <p>No privacy policy found on this page.</p>
+            ) : state === "links found" ? (
+              <p>Privacy or Terms link found. Extracting content...</p>
             ) : (
               <div>
                 {activeTab === "scan" && (
@@ -143,13 +119,7 @@ function App() {
                 {activeTab === "upload" && (
                   <div>
                     <input
-                      type="file"
-                      accept=".txt,.docx,.pdf"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFileUpload(file);
-                      }}
-                    />
+                      type="file" />
                   </div>
                 )}
               </div>

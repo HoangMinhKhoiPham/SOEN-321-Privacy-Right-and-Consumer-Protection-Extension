@@ -67,7 +67,7 @@ export const generatePrompt = (text: string) => `
   Analyze this text:
   "${text}"
   Return only valid JSON and nothing else.
-  `;
+`;
 
 export const fetchApi = async (text: string): Promise<IResponse | null> => {
     const apiUrl = "https://api.openai.com/v1/chat/completions";
@@ -145,28 +145,83 @@ export const manualParseResponse = (response: string): IResponse | null => {
     }
 };
 
-export const extractTextFromPage = async (): Promise<string> => {
+export const extractTextFromPrivacyPage = async (): Promise<string | null> => {
     return new Promise<string>((resolve, reject) => {
-        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-            if (!tabs[0]?.id) return reject("No active tab found.");
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            const tab = tabs[0];
+            if (!tab || !tab.id) {
+                reject("No active tab found.");
+                return;
+            }
 
             chrome.scripting.executeScript(
                 {
-                    target: { tabId: tabs[0].id },
-                    func: () => document.body.innerText || "",
+                    target: { tabId: tab.id },
+                    func: () => {
+                        console.log("Executing script on the page...");
+
+                        let privacyPolicyURL: string | any;
+                        const links = document.querySelectorAll("a");
+                        links.forEach((link) => {
+                            const href = link.getAttribute("href");
+                            if (href && href.toLowerCase().includes("privacy")) {
+                                privacyPolicyURL = href;
+                            }
+                        });
+
+                        console.log("Extracted Privacy Policy URL:", privacyPolicyURL);
+
+                        if (!privacyPolicyURL) {
+                            console.warn("No privacy policy link found.");
+                            return null; // Return null if no privacy link is found
+                        }
+
+                        // Resolve relative URL to absolute URL if necessary
+                        if (!privacyPolicyURL.startsWith("http")) {
+                            const baseUrl = window.location.origin; // Get the base URL of the current page
+                            privacyPolicyURL = new URL(privacyPolicyURL, baseUrl).href; // Resolve to absolute URL
+                        }
+                        // Fetch the privacy policy page
+                        return fetch(privacyPolicyURL)
+                            .then((response) => {
+                                console.log("Fetch response:", response); // Log the response
+                                if (!response.ok) {
+                                    throw new Error("Failed to fetch the page");
+                                }
+                                return response.text();
+                            })
+                            .then((pageText) => {
+                                console.log("Page text fetched:", pageText); // Log the page content
+                                const bodyText = new DOMParser()
+                                    .parseFromString(pageText, "text/html")
+                                    .body.innerText;
+                                console.log("Extracted body text from privacy page:", bodyText); // Log the extracted body text
+                                return bodyText;
+                            })
+                            .catch((error) => {
+                                console.error("Failed to fetch privacy policy page:", error);
+                                return null; // Return null on failure
+                            });
+                    },
                 },
                 (results) => {
-                    if (chrome.runtime.lastError) {
-                        console.error(chrome.runtime.lastError);
-                        return reject("Failed to extract text from the page.");
+                    if (chrome.runtime.lastError || !results || !results[0]?.result) {
+                        reject("Failed to extract privacy policy page content.");
+                        return;
                     }
-                    resolve(results[0]?.result || "");
+
+                    const pageText = results[0].result;
+                    if (!pageText) {
+                        reject("Failed to fetch privacy policy page content.");
+                        return;
+                    }
+
+                    resolve(pageText); // Resolve with the extracted page text
                 }
             );
         });
     });
 };
-
 // Define the IResponse interface here for typescript consistency
 export interface IResponse {
     scores: Record<Category, number>;
