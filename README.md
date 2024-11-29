@@ -1,4 +1,16 @@
-# 321-Chrome-Extension
+# SOEN-321 Privacy Right and Consumer Protection Extension
+
+## Team Members
+| Name                               | Student ID            |
+|------------------------------------|-----------------------|
+| Hoang Minh Khoi Pham               | 40162551              |
+| Michaël Gugliandolo                | 40213419              |
+| Jessey Thach                       | 40210440              |
+| Mahanaim Rubin Yo                  | 40178119              |
+| Ahmad Elmahallawy                  | 40193418              |
+| Clara Gagnon                       | 40208598              |
+| Jean-Nicolas Sabatini-Ouellet      | 40207926              |
+
 
 # How to run extension
 1. Clone the repo
