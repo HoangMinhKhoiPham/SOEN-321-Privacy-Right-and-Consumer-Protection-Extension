@@ -74,12 +74,27 @@ function App() {
                     <div
                       className="circle"
                       style={{
-                        borderColor: total >= 90 ? "#4caf50" : "#ff9800",
+                        borderColor: total <= 40 ? "#f44336" : total <= 69 ? "#ff9800" : "#4caf50",
                       }}
                     >
                       {total}
                     </div>
                     <p>Overall Score</p>
+                    <div className="summary">
+                      <p><strong>Overall Evaluation:</strong> {response.summary?.overallEvaluation}</p>
+                      <p><strong>Pros:</strong></p>
+                      <ul>
+                        {response.summary?.pros?.map((pro, index) => (
+                          <li key={index}>{pro}</li>
+                        ))}
+                      </ul>
+                      <p><strong>Cons:</strong></p>
+                      <ul>
+                        {response.summary?.cons?.map((con, index) => (
+                          <li key={index}>{con}</li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
                 </div>
                 <div className="metrics-grid">

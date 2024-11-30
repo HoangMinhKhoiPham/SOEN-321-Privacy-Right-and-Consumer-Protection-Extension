@@ -82,18 +82,20 @@ export const generatePrompt = (text: string) => `
       "dataSecurity": "Explanation for Data Security score.",
       "dataDeletion": "Explanation for Data Deletion score.",
       "clarityOfPrivacyPolicy": "Explanation for Clarity of the Privacy Policy score.",
+    },
+     "summary": {
+    "overallEvaluation": "This policy is comprehensive but may be overwhelming for some users.",
+    "pros": [
+      "Clear explanation of data collection and usage.",
+      "Mechanisms for users to exercise privacy rights.",
+      "Commitment to data security."
+    ],
+    "cons": [
+      "Policy length and detail may be overwhelming.",
+      "Limited specifics on data security measures."
+    ]
     }
   }
-    Structured Summary:
-  - **Overall evaluation**: This policy is comprehensive, but the extensive detail might overwhelm some users.
-  - **Pros**:
-    - Clear explanation of data collection and usage.
-    - Mechanisms for users to exercise privacy rights.
-    - Commitment to data security.
-  - **Cons**:
-    - Policy length and detail may be overwhelming for some users.
-    - Some sections lack specifics, such as data security measures.
-
   Analyze this text:
   "${text}"
   
@@ -143,42 +145,49 @@ export const fetchApi = async (text: string): Promise<IResponse | null> => {
 
 export const manualParseResponse = (response: string): IResponse | null => {
     try {
-        let lines = response.split("\n").filter((line) => line.trim());
-        console.log(lines);
-        const jsonStr = lines.join(" ").replace(/```/g, "");
-        let sanitizedJsonStr = jsonStr.replace(/"(\w+)":\s*"N\/A"/g, '"$1": null');
-        sanitizedJsonStr = sanitizedJsonStr.replace(
-            /"(\w+)":\s*["']N\/A["']/g,
-            '"$1": null'
-        );
-        const jsonData = sanitizedJsonStr.match(/{.*}/s);
-        if (!jsonData) {
-            throw new Error("JSON data not found.");
+        console.log("Raw response:", response); // Log the full response
+
+        // First, we need to strip away any extra text that is not part of the JSON response.
+        const jsonMatch = response.match(/{.*}/s); // Match the JSON object that starts with `{` and ends with `}`
+        if (!jsonMatch) {
+            throw new Error("No valid JSON found in the response.");
         }
-        const parsedData = JSON.parse(jsonData[0]);
+
+        // Extract the valid JSON part
+        const jsonStr = jsonMatch[0];
+
+        // Parse the JSON string
+        const parsedData = JSON.parse(jsonStr);
         const scores = parsedData.scores as Record<Category, number>;
         const descriptions = parsedData.description as Record<Category, string>;
-        const mappedScores: Record<Category, number> = {} as Record<
-            Category,
-            number
-        >;
-        const mappedDescriptions: Record<Category, string> = {} as Record<
-            Category,
-            string
-        >;
+        const summary = parsedData.summary; // Extract the summary part
+
+        // Ensure summary exists
+        if (!summary) {
+            throw new Error("No summary found in the response.");
+        }
+
+        // Prepare the scores and descriptions as before
+        const mappedScores: Record<Category, number> = {} as Record<Category, number>;
+        const mappedDescriptions: Record<Category, string> = {} as Record<Category, string>;
+
         categories.forEach((category) => {
             mappedScores[category] = scores[category] || 0;
-            mappedDescriptions[category] =
-                descriptions[category] || "No details provided.";
+            mappedDescriptions[category] = descriptions[category] || "No details provided.";
         });
 
-        console.log(mappedScores);
-        return { scores: mappedScores, description: mappedDescriptions };
+        // Now return the parsed data along with the summary
+        return {
+            scores: mappedScores,
+            description: mappedDescriptions,
+            summary: summary, // Include the summary here
+        };
     } catch (error) {
         console.error("Error during manual parsing:", error);
         return null;
     }
 };
+
 
 export const extractTextFromPrivacyPage = async (): Promise<string | null> => {
     return new Promise<string>((resolve, reject) => {
@@ -272,4 +281,9 @@ export const extractTextFromPrivacyPage = async (): Promise<string | null> => {
 export interface IResponse {
     scores: Record<Category, number>;
     description: Record<Category, string>;
+    summary: {
+        overallEvaluation: string;
+        pros: string[];
+        cons: string[];
+    };
 }
