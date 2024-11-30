@@ -218,6 +218,14 @@ export const extractTextFromPrivacyPage = async (): Promise<string | null> => {
                     func: () => {
                         console.log("Executing script on the page...");
 
+                        const currentUrl = window.location.href.toLowerCase();
+                        // Check if the current URL contains "privacy" (case-insensitive)
+                        if (currentUrl.includes("privacy")) {
+                            console.log("Already on a privacy page, extracting content directly...");
+                            return document.body.innerText;
+                        }
+
+                        // Otherwise, look for a privacy policy link on the page
                         let privacyPolicyURL: string | any;
                         const links = document.querySelectorAll("a");
                         links.forEach((link) => {
@@ -239,6 +247,7 @@ export const extractTextFromPrivacyPage = async (): Promise<string | null> => {
                             const baseUrl = window.location.origin; // Get the base URL of the current page
                             privacyPolicyURL = new URL(privacyPolicyURL, baseUrl).href; // Resolve to absolute URL
                         }
+
                         // Fetch the privacy policy page
                         return fetch(privacyPolicyURL)
                             .then((response) => {
@@ -258,8 +267,7 @@ export const extractTextFromPrivacyPage = async (): Promise<string | null> => {
                                 );
 
                                 // Remove any script and style tags that might have been included
-                                const scriptsAndStyles =
-                                    parsedDoc.querySelectorAll("script, style");
+                                const scriptsAndStyles = parsedDoc.querySelectorAll("script, style");
                                 scriptsAndStyles.forEach((el) => el.remove());
 
                                 // Extract the text from the body of the parsed document
