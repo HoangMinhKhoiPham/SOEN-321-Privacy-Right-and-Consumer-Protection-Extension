@@ -3,66 +3,34 @@ import "./App.css";
 import {
   categories,
   labels,
+  extractTextFromPrivacyPage,
   fetchApi,
-  extractTextFromPage,
   IResponse,
-} from "./utils/apiUtils"; // Import the utility functions
+} from "./utils/apiUtils"; // Import the updated utility functions
 
 function App() {
   const [isScanning, setIsScanning] = useState(false);
-  const [state, setState] = useState<"error" | "found" | "not found" | "">("");
+  const [state, setState] = useState<"error" | "found" | "not found" | "links found" | "">("");
   const [response, setResponse] = useState<IResponse | null>(null);
-  const [total, setTotal] = useState<number | null>(null);
   const [url, setUrl] = useState("");
   const [activeTab, setActiveTab] = useState("scan");
 
-  const handleFileUpload = async (file: File) => {
-    try {
-      const text = await file.text();
-      await analyzeText(text);
-    } catch (error) {
-      console.error("Failed to read the file:", error);
-      setState("error");
-    }
-  };
-
-  const analyzeText = async (text: string) => {
-    setIsScanning(true);
-    const parsedJson = await fetchApi(text);
-    if (parsedJson) {
-      setResponse(parsedJson);
-      setState("found");
-
-      const totalScore = categories.reduce(
-        (sum, category) => sum + parsedJson.scores[category],
-        0
-      );
-      setTotal(((totalScore / categories.length) * 10).toFixed(2) as unknown as number);
-    } else {
-      setState("error");
-    }
-    setIsScanning(false);
-  };
-
   const analyzePage = async () => {
+    console.log("hello")
     setIsScanning(true);
     try {
-      const text = await extractTextFromPage();
-      if (!text) {
+      const pageText = await extractTextFromPrivacyPage();
+      if (!pageText) {
         setState("not found");
         return;
       }
-
-      const parsedJson = await fetchApi(text);
+      console.log("API:", pageText)
+      // Step 4: Send the extracted content to OpenAI for analysis
+      const parsedJson = await fetchApi(pageText);
+      console.log(parsedJson)
       if (parsedJson) {
         setResponse(parsedJson);
         setState("found");
-
-        const totalScore = categories.reduce(
-          (sum, category) => sum + parsedJson.scores[category],
-          0
-        );
-        setTotal(((totalScore / categories.length) * 10).toFixed(2) as unknown as number);
       } else {
         setState("error");
       }
@@ -89,7 +57,7 @@ function App() {
           </header>
 
           <div className="main-content">
-            {state === "found" && response && total !== null ? (
+            {state === "found" && response !== null ? (
               <div className="result-container">
                 <button className="back-button" onClick={() => setState("")}>
                   Back
@@ -99,12 +67,26 @@ function App() {
                     <div
                       className="circle"
                       style={{
-                        borderColor: total >= 90 ? "#4caf50" : "#ff9800",
+                        borderColor: response.summary?.overallScore <= 4 ? "#f44336" : response.summary?.overallScore < 7 ? "#ff9800" : "#4caf50",
                       }}
                     >
-                      {total} %
+                      {response.summary?.overallScore}
                     </div>
-                    <p>Overall Score</p>
+                    <div className="summary">
+                      <p><strong>Overall Evaluation:</strong> {response.summary?.overallEvaluation}</p>
+                      <p><strong>Pros:</strong></p>
+                      <ul>
+                        {response.summary?.pros?.map((pro, index) => (
+                          <li key={index}>{pro}</li>
+                        ))}
+                      </ul>
+                      <p><strong>Cons:</strong></p>
+                      <ul>
+                        {response.summary?.cons?.map((con, index) => (
+                          <li key={index}>{con}</li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
                 </div>
                 <div className="metrics-grid">
@@ -119,6 +101,8 @@ function App() {
               </div>
             ) : state === "not found" ? (
               <p>No privacy policy found on this page.</p>
+            ) : state === "links found" ? (
+              <p>Privacy or Terms link found. Extracting content...</p>
             ) : (
               <div>
                 {activeTab === "scan" && (
@@ -143,13 +127,7 @@ function App() {
                 {activeTab === "upload" && (
                   <div>
                     <input
-                      type="file"
-                      accept=".txt,.docx,.pdf"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFileUpload(file);
-                      }}
-                    />
+                      type="file" />
                   </div>
                 )}
               </div>
