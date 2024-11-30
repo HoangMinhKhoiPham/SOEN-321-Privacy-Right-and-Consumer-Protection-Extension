@@ -150,35 +150,52 @@ export const fetchApi = async (text: string): Promise<IResponse | null> => {
 export const manualParseResponse = (response: string): IResponse | null => {
     try {
         let lines = response.split("\n").filter((line) => line.trim());
-        console.log(lines);
+        console.log("Raw lines:", lines);
+
+        // Join the lines into a single string and remove any code block markers (```)
         const jsonStr = lines.join(" ").replace(/```/g, "");
+
+        // Sanitize the JSON string by replacing "N/A" with null
         let sanitizedJsonStr = jsonStr.replace(/"(\w+)":\s*"N\/A"/g, '"$1": null');
         sanitizedJsonStr = sanitizedJsonStr.replace(
             /"(\w+)":\s*["']N\/A["']/g,
             '"$1": null'
         );
+
+        // Check if the JSON is potentially incomplete
+        const openingBrackets = (sanitizedJsonStr.match(/{/g) || []).length;
+        const closingBrackets = (sanitizedJsonStr.match(/}/g) || []).length;
+
+        // If there's a mismatch in the bracket count, add the missing closing bracket
+        if (openingBrackets > closingBrackets) {
+            sanitizedJsonStr += "}";
+        }
+
+        // Extract the JSON data using a regular expression to match the full JSON object
         const jsonData = sanitizedJsonStr.match(/{.*}/s);
         if (!jsonData) {
             throw new Error("JSON data not found.");
         }
+
+        // Parse the JSON data
         const parsedData = JSON.parse(jsonData[0]);
+
+        // Extract and map the scores, descriptions, and summary
         const scores = parsedData.scores as Record<Category, number>;
         const descriptions = parsedData.description as Record<Category, string>;
-        const summary = parsedData.summary; // Extract the summary part
-        const mappedScores: Record<Category, number> = {} as Record<
-            Category,
-            number
-        >;
-        const mappedDescriptions: Record<Category, string> = {} as Record<
-            Category,
-            string
-        >;
+        const summary = parsedData.summary;
+
+        const mappedScores: Record<Category, number> = {} as Record<Category, number>;
+        const mappedDescriptions: Record<Category, string> = {} as Record<Category, string>;
+
         categories.forEach((category) => {
             mappedScores[category] = scores[category] || 0;
-            mappedDescriptions[category] =
-                descriptions[category] || "No details provided.";
+            mappedDescriptions[category] = descriptions[category] || "No details provided.";
         });
+
+        // Return the parsed result
         return { scores: mappedScores, description: mappedDescriptions, summary: summary };
+
     } catch (error) {
         console.error("Error during manual parsing:", error);
         return null;
