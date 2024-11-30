@@ -4,22 +4,22 @@ import {
   categories,
   labels,
   extractTextFromPrivacyPage,
+  fetchApi,
   IResponse,
 } from "./utils/apiUtils"; // Import the updated utility functions
 
 function App() {
   const [isScanning, setIsScanning] = useState(false);
   const [state, setState] = useState<"error" | "found" | "not found" | "links found" | "">("");
-  const [response] = useState<IResponse | null>(null);
-  const [total] = useState<number | null>(null);
+  const [response, setResponse] = useState<IResponse | null>(null);
+  const [total, setTotal] = useState<number | null>(null);
   const [url, setUrl] = useState("");
   const [activeTab, setActiveTab] = useState("scan");
 
   const analyzePage = async () => {
+    console.log("hello")
     setIsScanning(true);
     try {
-      // Step 3: Send a background request to fetch the page content
-      // Instead of navigating to the privacy page, we'll extract the content behind the scenes.
       const pageText = await extractTextFromPrivacyPage();
       if (!pageText) {
         setState("not found");
@@ -27,19 +27,19 @@ function App() {
       }
       console.log("API:", pageText)
       // Step 4: Send the extracted content to OpenAI for analysis
-      // const parsedJson = await fetchApi(pageText);
-      // if (parsedJson) {
-      //   setResponse(parsedJson);
-      //   setState("found");
+      const parsedJson = await fetchApi(pageText);
+      if (parsedJson) {
+        setResponse(parsedJson);
+        setState("found");
 
-      //   const totalScore = categories.reduce(
-      //     (sum, category) => sum + parsedJson.scores[category],
-      //     0
-      //   );
-      //   setTotal(((totalScore / categories.length) * 10).toFixed(2) as unknown as number);
-      // } else {
-      //   setState("error");
-      // }
+        const totalScore = categories.reduce(
+          (sum, category) => sum + parsedJson.scores[category],
+          0
+        );
+        setTotal(((totalScore / categories.length) * 10).toFixed(2) as unknown as number);
+      } else {
+        setState("error");
+      }
     } catch (error) {
       console.error("Error analyzing page:", error);
       setState("error");
