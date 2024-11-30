@@ -93,9 +93,13 @@ export const generatePrompt = (text: string) => `
     "cons": [
       "Policy length and detail may be overwhelming.",
       "Limited specifics on data security measures."
-    ]
-    }
+    ],
+    "overallScore": 5.5
+    },
   }
+
+    The response should be a complete and valid JSON object. If there is any issue with the formatting or missing brackets, please ensure the JSON is well-formed and contains all necessary closing brackets. Return **only** the JSON output and nothing else.
+
   Analyze this text:
   "${text}"
   
@@ -145,43 +149,36 @@ export const fetchApi = async (text: string): Promise<IResponse | null> => {
 
 export const manualParseResponse = (response: string): IResponse | null => {
     try {
-        console.log("Raw response:", response); // Log the full response
-
-        // First, we need to strip away any extra text that is not part of the JSON response.
-        const jsonMatch = response.match(/{.*}/s); // Match the JSON object that starts with `{` and ends with `}`
-        if (!jsonMatch) {
-            throw new Error("No valid JSON found in the response.");
+        let lines = response.split("\n").filter((line) => line.trim());
+        console.log(lines);
+        const jsonStr = lines.join(" ").replace(/```/g, "");
+        let sanitizedJsonStr = jsonStr.replace(/"(\w+)":\s*"N\/A"/g, '"$1": null');
+        sanitizedJsonStr = sanitizedJsonStr.replace(
+            /"(\w+)":\s*["']N\/A["']/g,
+            '"$1": null'
+        );
+        const jsonData = sanitizedJsonStr.match(/{.*}/s);
+        if (!jsonData) {
+            throw new Error("JSON data not found.");
         }
-
-        // Extract the valid JSON part
-        const jsonStr = jsonMatch[0];
-
-        // Parse the JSON string
-        const parsedData = JSON.parse(jsonStr);
+        const parsedData = JSON.parse(jsonData[0]);
         const scores = parsedData.scores as Record<Category, number>;
         const descriptions = parsedData.description as Record<Category, string>;
         const summary = parsedData.summary; // Extract the summary part
-
-        // Ensure summary exists
-        if (!summary) {
-            throw new Error("No summary found in the response.");
-        }
-
-        // Prepare the scores and descriptions as before
-        const mappedScores: Record<Category, number> = {} as Record<Category, number>;
-        const mappedDescriptions: Record<Category, string> = {} as Record<Category, string>;
-
+        const mappedScores: Record<Category, number> = {} as Record<
+            Category,
+            number
+        >;
+        const mappedDescriptions: Record<Category, string> = {} as Record<
+            Category,
+            string
+        >;
         categories.forEach((category) => {
             mappedScores[category] = scores[category] || 0;
-            mappedDescriptions[category] = descriptions[category] || "No details provided.";
+            mappedDescriptions[category] =
+                descriptions[category] || "No details provided.";
         });
-
-        // Now return the parsed data along with the summary
-        return {
-            scores: mappedScores,
-            description: mappedDescriptions,
-            summary: summary, // Include the summary here
-        };
+        return { scores: mappedScores, description: mappedDescriptions, summary: summary };
     } catch (error) {
         console.error("Error during manual parsing:", error);
         return null;
@@ -283,6 +280,7 @@ export interface IResponse {
     description: Record<Category, string>;
     summary: {
         overallEvaluation: string;
+        overallScore: number;
         pros: string[];
         cons: string[];
     };

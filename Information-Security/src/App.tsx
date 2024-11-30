@@ -12,7 +12,6 @@ function App() {
   const [isScanning, setIsScanning] = useState(false);
   const [state, setState] = useState<"error" | "found" | "not found" | "links found" | "">("");
   const [response, setResponse] = useState<IResponse | null>(null);
-  const [total, setTotal] = useState<number | null>(null);
   const [url, setUrl] = useState("");
   const [activeTab, setActiveTab] = useState("scan");
 
@@ -32,12 +31,6 @@ function App() {
       if (parsedJson) {
         setResponse(parsedJson);
         setState("found");
-
-        const totalScore = categories.reduce(
-          (sum, category) => sum + parsedJson.scores[category],
-          0
-        );
-        setTotal(((totalScore / categories.length) * 10).toFixed(2) as unknown as number);
       } else {
         setState("error");
       }
@@ -64,7 +57,7 @@ function App() {
           </header>
 
           <div className="main-content">
-            {state === "found" && response && total !== null ? (
+            {state === "found" && response !== null ? (
               <div className="result-container">
                 <button className="back-button" onClick={() => setState("")}>
                   Back
@@ -74,12 +67,11 @@ function App() {
                     <div
                       className="circle"
                       style={{
-                        borderColor: total <= 40 ? "#f44336" : total <= 69 ? "#ff9800" : "#4caf50",
+                        borderColor: response.summary?.overallScore <= 4 ? "#f44336" : response.summary?.overallScore < 7 ? "#ff9800" : "#4caf50",
                       }}
                     >
-                      {total}
+                      {response.summary?.overallScore}
                     </div>
-                    <p>Overall Score</p>
                     <div className="summary">
                       <p><strong>Overall Evaluation:</strong> {response.summary?.overallEvaluation}</p>
                       <p><strong>Pros:</strong></p>
