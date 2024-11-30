@@ -77,7 +77,7 @@ function App() {
                         borderColor: total >= 90 ? "#4caf50" : "#ff9800",
                       }}
                     >
-                      {total} %
+                      {total}
                     </div>
                     <p>Overall Score</p>
                   </div>
