@@ -28,6 +28,7 @@ function App() {
       console.log("API:", pageText)
       // Step 4: Send the extracted content to OpenAI for analysis
       const parsedJson = await fetchApi(pageText);
+      console.log(parsedJson)
       if (parsedJson) {
         setResponse(parsedJson);
         setState("found");
