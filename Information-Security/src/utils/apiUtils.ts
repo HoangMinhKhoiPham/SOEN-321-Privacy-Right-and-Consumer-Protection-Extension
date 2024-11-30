@@ -69,21 +69,77 @@ export const generatePrompt = (text: string) => `
   Return only valid JSON and nothing else.
 `;
 
-export const fetchApi = async (text: string): Promise<IResponse | null> => {
-    // @HoangMinhKhoiPham: You will need to call it in chunks since the data is too large
+// Function to split a long text into chunks of a specified size
+const CHUNK_SIZE = 3000; // Max size of a chunk in characters
+const OVERLAP_SIZE = 500; // Size of overlap between chunks (adjust as needed)
 
+const chunkText = (text: string, chunkSize: number, overlapSize: number) => {
+    const chunks: string[] = [];
+    let currentIndex = 0;
+
+    while (currentIndex < text.length) {
+        // Create a chunk from the current position up to the chunk size
+        const chunk = text.slice(currentIndex, currentIndex + chunkSize);
+        chunks.push(chunk);
+
+        // Move the starting point for the next chunk back by the overlap size
+        currentIndex += chunkSize - overlapSize;
+    }
+
+    return chunks;
+};
+
+
+// Function to merge scores by averaging
+const averageScores = (accumulatedScores: Record<Category, number>, newScores: Record<Category, number>) => {
+    categories.forEach((category) => {
+        if (accumulatedScores[category] === undefined) {
+            accumulatedScores[category] = newScores[category];
+        } else {
+            accumulatedScores[category] = Math.ceil((accumulatedScores[category] + newScores[category]) / 2);
+        }
+    });
+};
+
+export const fetchApi = async (text: string): Promise<IResponse | null> => {
+    const chunks = chunkText(text, CHUNK_SIZE, OVERLAP_SIZE);
+    let accumulatedResponse: IResponse | null = null;
+
+    for (const chunk of chunks) {
+        const response = await fetchSingleChunk(chunk);
+
+        if (!response) {
+            console.error("Error processing chunk");
+            continue;
+        }
+
+        // Initialize or merge response
+        if (!accumulatedResponse) {
+            accumulatedResponse = response;
+        } else {
+            // Average the scores and merge descriptions
+            averageScores(accumulatedResponse.scores, response.scores);
+            accumulatedResponse.description = { ...accumulatedResponse.description, ...response.description };
+        }
+    }
+
+    return accumulatedResponse;
+};
+
+// Function to send a single chunk to the OpenAI API
+const fetchSingleChunk = async (chunk: string): Promise<IResponse | null> => {
     const apiUrl = "https://api.groq.com/openai/v1/chat/completions";
     const headers = {
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_APP_GROQ_API_KEY}`,
     };
-    console.log("Text API: ", text)
+
     const body = JSON.stringify({
         model: "llama3-8b-8192",
         messages: [
             {
                 role: "user",
-                content: generatePrompt(text),
+                content: generatePrompt(chunk),
             },
         ],
     });
@@ -91,12 +147,11 @@ export const fetchApi = async (text: string): Promise<IResponse | null> => {
     try {
         const response = await fetch(apiUrl, { method: "POST", headers, body });
         const data = await response.json();
-        console.log("Data", data)
         const responseContent = data.choices[0]?.message?.content || "";
+
         let parsedJson: IResponse | null = null;
         try {
             parsedJson = JSON.parse(responseContent);
-            console.log("ParsedJson", parsedJson);
         } catch {
             console.warn("Response is not valid JSON. Attempting manual parsing...");
             parsedJson = manualParseResponse(responseContent);
@@ -104,7 +159,7 @@ export const fetchApi = async (text: string): Promise<IResponse | null> => {
 
         return parsedJson;
     } catch (error) {
-        console.error("Error fetching API:", error);
+        console.error("Error fetching API for chunk:", error);
         return null;
     }
 };
