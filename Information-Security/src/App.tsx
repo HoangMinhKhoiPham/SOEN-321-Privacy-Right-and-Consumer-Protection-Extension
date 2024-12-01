@@ -66,6 +66,11 @@ function App() {
       ) : (
         <>
           <header className="header">
+            {state === "found" && response !== null && (
+              <button className="back-button" onClick={() => setState("")}>
+                ← Back
+              </button>
+            )}
             <h1>Policy Check Extension</h1>
             <p>Analyze privacy policies effortlessly!</p>
           </header>
@@ -73,9 +78,6 @@ function App() {
           <div className="main-content">
             {state === "found" && response !== null ? (
               <div className="result-container">
-                <button className="back-button" onClick={() => setState("")}>
-                ← Back
-                </button>
                 <div className="top-metrics">
                   <div className="circle-metric">
                     <div
@@ -85,8 +87,8 @@ function App() {
                           response.summary?.overallScore <= 4
                             ? "#f44336"
                             : response.summary?.overallScore < 8
-                            ? "#ff9800"
-                            : "#4caf50",
+                              ? "#ff9800"
+                              : "#4caf50",
                       }}
                     >
                       {response.summary?.overallScore} / 10
@@ -125,8 +127,8 @@ function App() {
                           response.scores[category] <= 4
                             ? "#f44336"
                             : response.scores[category] < 8
-                            ? "#ff9800"
-                            : "#4caf50",
+                              ? "#ff9800"
+                              : "#4caf50",
                       }}
                     >
                       <div className="circle-metric">
@@ -137,8 +139,8 @@ function App() {
                               response.scores[category] <= 4
                                 ? "#f44336"
                                 : response.scores[category] < 8
-                                ? "#ff9800"
-                                : "#4caf50",
+                                  ? "#ff9800"
+                                  : "#4caf50",
                           }}
                         >
                           <span className="circle-text">
