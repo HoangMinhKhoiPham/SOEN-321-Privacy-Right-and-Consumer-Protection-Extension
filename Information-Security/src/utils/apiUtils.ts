@@ -14,8 +14,8 @@ export type Category = (typeof categories)[number];
 
 export const labels: Record<Category, string> = {
   dataCollection: "Data Collection",
-  dataUsage: "Data Sharing",
-  dataSharing: "User Choice",
+  dataUsage: "Data Usage",
+  dataSharing: "User Sharing",
   dataSelling: "Data Selling",
   optOutOptions: "Opt-Out Options",
   dataSecurity: "Data Security",
