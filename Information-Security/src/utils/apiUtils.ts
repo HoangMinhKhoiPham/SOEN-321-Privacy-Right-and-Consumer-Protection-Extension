@@ -98,7 +98,7 @@ export const generatePrompt = (text: string) => `
     "overallScore": 5.5
     },
   }
-    This is just an example and you can have more or fewer list of pros and cons based on the policy.
+    This is just an example and you can have more or fewer lists of pros and cons based on the policy.
     The response should be a complete and valid JSON object. Do not provide the score in the description part. If there is any issue with the formatting or missing brackets, please ensure the JSON is well-formed and contains all necessary closing brackets. Return **only** the JSON output and nothing else.
 
   Analyze this text:
