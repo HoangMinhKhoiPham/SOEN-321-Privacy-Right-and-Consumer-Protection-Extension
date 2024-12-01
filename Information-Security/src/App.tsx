@@ -5,8 +5,9 @@ import {
   labels,
   extractTextFromPrivacyPage,
   fetchApi,
+  extractTextFromPrivacyUrl,
   IResponse,
-} from "./utils/apiUtils"; // Import the updated utility functions
+} from "./utils/apiUtils";
 
 function App() {
   const [isScanning, setIsScanning] = useState(false);
@@ -15,19 +16,19 @@ function App() {
   const [url, setUrl] = useState("");
   const [activeTab, setActiveTab] = useState("scan");
 
-  const analyzePage = async () => {
-    console.log("hello")
+  const analyzeContent = async (getPageText: () => Promise<string | null>) => {
     setIsScanning(true);
     try {
-      const pageText = await extractTextFromPrivacyPage();
+      const pageText = await getPageText();
       if (!pageText) {
         setState("not found");
         return;
       }
-      console.log("API:", pageText)
-      // Step 4: Send the extracted content to OpenAI for analysis
+
+      console.log("API:", pageText);
       const parsedJson = await fetchApi(pageText);
-      console.log(parsedJson)
+      console.log(parsedJson);
+
       if (parsedJson) {
         setResponse(parsedJson);
         setState("found");
@@ -42,6 +43,17 @@ function App() {
     }
   };
 
+  const analyzePage = async () => {
+    await analyzeContent(extractTextFromPrivacyPage);
+  };
+
+  const analyzeUrl = async () => {
+    if (!url) {
+      setState("error");
+      return;
+    }
+    await analyzeContent(() => extractTextFromPrivacyUrl(url));
+  };
   return (
     <div className="container">
       {isScanning ? (
@@ -119,15 +131,9 @@ function App() {
                       value={url}
                       onChange={(e) => setUrl(e.target.value)}
                     />
-                    <button className="input-button" onClick={analyzePage}>
+                    <button className="input-button" onClick={analyzeUrl}>
                       Check URL
                     </button>
-                  </div>
-                )}
-                {activeTab === "upload" && (
-                  <div>
-                    <input
-                      type="file" />
                   </div>
                 )}
               </div>
@@ -138,7 +144,6 @@ function App() {
             <nav className="bottom-nav">
               <button onClick={() => setActiveTab("scan")}>🔍 Analyze</button>
               <button onClick={() => setActiveTab("url")}>🌐 URL</button>
-              <button onClick={() => setActiveTab("upload")}>📄 Upload</button>
             </nav>
           )}
         </>

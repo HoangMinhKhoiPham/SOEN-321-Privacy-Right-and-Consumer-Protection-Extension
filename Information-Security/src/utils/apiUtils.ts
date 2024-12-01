@@ -108,8 +108,6 @@ export const generatePrompt = (text: string) => `
 
 
 export const fetchApi = async (text: string): Promise<IResponse | null> => {
-    // @HoangMinhKhoiPham: You will need to call it in chunks since the data is too large
-
     const apiUrl = "https://api.groq.com/openai/v1/chat/completions";
     const headers = {
         "Content-Type": "application/json",
@@ -219,13 +217,11 @@ export const extractTextFromPrivacyPage = async (): Promise<string | null> => {
                         console.log("Executing script on the page...");
 
                         const currentUrl = window.location.href.toLowerCase();
-                        // Check if the current URL contains "privacy" (case-insensitive)
                         if (currentUrl.includes("privacy")) {
                             console.log("Already on a privacy page, extracting content directly...");
                             return document.body.innerText;
                         }
 
-                        // Otherwise, look for a privacy policy link on the page
                         let privacyPolicyURL: string | any;
                         const links = document.querySelectorAll("a");
                         links.forEach((link) => {
@@ -242,38 +238,32 @@ export const extractTextFromPrivacyPage = async (): Promise<string | null> => {
                             return null; // Return null if no privacy link is found
                         }
 
-                        // Resolve relative URL to absolute URL if necessary
                         if (!privacyPolicyURL.startsWith("http")) {
-                            const baseUrl = window.location.origin; // Get the base URL of the current page
-                            privacyPolicyURL = new URL(privacyPolicyURL, baseUrl).href; // Resolve to absolute URL
+                            const baseUrl = window.location.origin;
+                            privacyPolicyURL = new URL(privacyPolicyURL, baseUrl).href;
                         }
 
-                        // Fetch the privacy policy page
                         return fetch(privacyPolicyURL)
                             .then((response) => {
-                                console.log("Fetch response:", response); // Log the response
+                                console.log("Fetch response:", response);
                                 if (!response.ok) {
                                     throw new Error("Failed to fetch the page");
                                 }
                                 return response.text();
                             })
                             .then((pageText) => {
-                                console.log("Page text fetched:", pageText); // Log the page content
+                                console.log("Page text fetched:", pageText);
 
-                                // Parse the page text to HTML
                                 const parsedDoc = new DOMParser().parseFromString(
                                     pageText,
                                     "text/html"
                                 );
 
-                                // Remove any script and style tags that might have been included
                                 const scriptsAndStyles = parsedDoc.querySelectorAll("script, style");
                                 scriptsAndStyles.forEach((el) => el.remove());
 
-                                // Extract the text from the body of the parsed document
                                 const bodyText = parsedDoc.body.innerText;
-                                console.log("Extracted body text from privacy page:", bodyText); // Log the extracted body text
-                                return bodyText;
+                                console.log("Extracted body text from privacy page:", bodyText);
                             })
                             .catch((error) => {
                                 console.error("Failed to fetch privacy policy page:", error);
@@ -299,7 +289,75 @@ export const extractTextFromPrivacyPage = async (): Promise<string | null> => {
         });
     });
 };
-// Define the IResponse interface here for typescript consistency
+
+export const extractTextFromPrivacyUrl = async (url: string): Promise<string | null> => {
+    try {
+        if (url.toLowerCase().includes("privacy")) {
+            console.log("The provided URL already looks like a privacy page. Extracting content directly...");
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error("Failed to fetch the page");
+            }
+
+            const pageText = await response.text();
+            const parsedDoc = new DOMParser().parseFromString(pageText, "text/html");
+
+            const scriptsAndStyles = parsedDoc.querySelectorAll("script, style");
+            scriptsAndStyles.forEach((el) => el.remove());
+
+            const bodyText = parsedDoc.body.innerText;
+            console.log("Extracted body text from the provided privacy policy page:", bodyText);
+            return bodyText;
+        }
+
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error("Failed to fetch the page");
+        }
+
+        const pageText = await response.text();
+        const parsedDoc = new DOMParser().parseFromString(pageText, "text/html");
+
+        let privacyPolicyURL: string | null = null;
+        const links = parsedDoc.querySelectorAll("a");
+        links.forEach((link) => {
+            const href = link.getAttribute("href");
+            if (href && href.toLowerCase().includes("privacy")) {
+                if (!href.startsWith("http")) {
+                    const baseUrl = new URL(url);
+                    privacyPolicyURL = new URL(href, baseUrl).href;
+                } else {
+                    privacyPolicyURL = href;
+                }
+            }
+        });
+
+        if (!privacyPolicyURL) {
+            console.warn("No privacy policy link found on the page.");
+            return null;
+        }
+
+        const privacyResponse = await fetch(privacyPolicyURL);
+        if (!privacyResponse.ok) {
+            throw new Error("Failed to fetch the privacy policy page");
+        }
+
+        const privacyPageText = await privacyResponse.text();
+        const privacyParsedDoc = new DOMParser().parseFromString(privacyPageText, "text/html");
+
+        const scriptsAndStylesPrivacy = privacyParsedDoc.querySelectorAll("script, style");
+        scriptsAndStylesPrivacy.forEach((el) => el.remove());
+
+        const bodyTextPrivacy = privacyParsedDoc.body.innerText;
+        console.log("Extracted body text from privacy policy page:", bodyTextPrivacy);
+        return bodyTextPrivacy;
+
+    } catch (error) {
+        console.error("Error extracting privacy policy content:", error);
+        return null;
+    }
+};
 export interface IResponse {
     scores: Record<Category, number>;
     description: Record<Category, string>;
