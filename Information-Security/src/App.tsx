@@ -136,12 +136,6 @@ function App() {
                     </button>
                   </div>
                 )}
-                {activeTab === "upload" && (
-                  <div>
-                    <input
-                      type="file" />
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -150,7 +144,6 @@ function App() {
             <nav className="bottom-nav">
               <button onClick={() => setActiveTab("scan")}>🔍 Analyze</button>
               <button onClick={() => setActiveTab("url")}>🌐 URL</button>
-              <button onClick={() => setActiveTab("upload")}>📄 Upload</button>
             </nav>
           )}
         </>
