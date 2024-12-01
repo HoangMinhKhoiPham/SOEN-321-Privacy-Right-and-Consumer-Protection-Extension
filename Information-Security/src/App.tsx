@@ -11,7 +11,9 @@ import {
 
 function App() {
   const [isScanning, setIsScanning] = useState(false);
-  const [state, setState] = useState<"error" | "found" | "not found" | "links found" | "">("");
+  const [state, setState] = useState<
+    "error" | "found" | "not found" | "links found" | ""
+  >("");
   const [response, setResponse] = useState<IResponse | null>(null);
   const [url, setUrl] = useState("");
   const [activeTab, setActiveTab] = useState("scan");
@@ -72,30 +74,42 @@ function App() {
             {state === "found" && response !== null ? (
               <div className="result-container">
                 <button className="back-button" onClick={() => setState("")}>
-                  Back
+                ← Back
                 </button>
                 <div className="top-metrics">
                   <div className="circle-metric">
                     <div
                       className="circle"
                       style={{
-                        borderColor: response.summary?.overallScore <= 4 ? "#f44336" : response.summary?.overallScore < 7 ? "#ff9800" : "#4caf50",
+                        borderColor:
+                          response.summary?.overallScore <= 4
+                            ? "#f44336"
+                            : response.summary?.overallScore < 8
+                            ? "#ff9800"
+                            : "#4caf50",
                       }}
                     >
-                      {response.summary?.overallScore}
+                      {response.summary?.overallScore} / 10
                     </div>
                     <div className="summary">
-                      <p><strong>Overall Evaluation:</strong> {response.summary?.overallEvaluation}</p>
-                      <p><strong>Pros:</strong></p>
+                      <p>
+                        <strong>Overall Evaluation:</strong>{" "}
+                        {response.summary?.overallEvaluation}
+                      </p>
+                      <p>
+                        <strong>Pros:</strong>
+                      </p>
                       <ul>
                         {response.summary?.pros?.map((pro, index) => (
-                          <li key={index}>{pro}</li>
+                          <li key={index}><p>{pro}</p></li>
                         ))}
                       </ul>
-                      <p><strong>Cons:</strong></p>
+                      <p>
+                        <strong>Cons:</strong>
+                      </p>
                       <ul>
                         {response.summary?.cons?.map((con, index) => (
-                          <li key={index}>{con}</li>
+                          <li key={index}><p>{con}</p></li>
                         ))}
                       </ul>
                     </div>
@@ -103,9 +117,39 @@ function App() {
                 </div>
                 <div className="metrics-grid">
                   {categories.map((category) => (
-                    <div key={category} className="metric-item">
-                      <h4>{labels[category]}</h4>
-                      <p>Score: {response.scores[category]}</p>
+                    <div
+                      key={category}
+                      className="metric-item"
+                      style={{
+                        borderColor:
+                          response.scores[category] <= 4
+                            ? "#f44336"
+                            : response.scores[category] < 8
+                            ? "#ff9800"
+                            : "#4caf50",
+                      }}
+                    >
+                      <div className="circle-metric">
+                        <div
+                          className="circle"
+                          style={{
+                            borderColor:
+                              response.scores[category] <= 4
+                                ? "#f44336"
+                                : response.scores[category] < 8
+                                ? "#ff9800"
+                                : "#4caf50",
+                          }}
+                        >
+                          <span className="circle-text">
+                            <strong>{response.scores[category]}</strong>
+                            <strong>/10</strong>
+                          </span>
+                        </div>
+                        <strong>
+                          <p className="circle-label">{labels[category]}</p>
+                        </strong>
+                      </div>
                       <p>{response.description[category]}</p>
                     </div>
                   ))}
