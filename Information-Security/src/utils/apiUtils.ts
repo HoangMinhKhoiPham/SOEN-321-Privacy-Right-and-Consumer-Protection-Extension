@@ -86,18 +86,19 @@ export const generatePrompt = (text: string) => `
      "summary": {
     "overallEvaluation": "Evaluation of the categories and overall policy in a summary",
     "pros": [
-      "list of the positive aspects of the 8 categories",
-      "list of the positive aspects of the 8 categories",
-      "list of the positive aspects of the 8 categories"
+      "A clear positive aspect of a specific category, explained with an example or reason.",
+      "A focused, specific strength tied to a high score in a category.",
+      "Any additional detail that stands out"
     ],
     "cons": [
-      "list of the negative aspects of the 8 categories",
-      "list of the positive aspects of the 8 categories"
+      "A specific weakness tied to a low score in a category",
+      "Clear, actionable feedback on what could improve the policy.",
+      "Any noticeable omissions or areas lacking detail."
     ],
     "overallScore": 5.5
     },
   }
-
+    This is just an example and you can have more or fewer list of pros and cons based on the policy.
     The response should be a complete and valid JSON object. Do not provide the score in the description part. If there is any issue with the formatting or missing brackets, please ensure the JSON is well-formed and contains all necessary closing brackets. Return **only** the JSON output and nothing else.
 
   Analyze this text:
