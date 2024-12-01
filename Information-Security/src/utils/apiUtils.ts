@@ -215,13 +215,11 @@ export const extractTextFromPrivacyPage = async (): Promise<string | null> => {
                     target: { tabId: tab.id },
                     func: () => {
                         console.log("Executing script on the page...");
-
                         const currentUrl = window.location.href.toLowerCase();
                         if (currentUrl.includes("privacy")) {
                             console.log("Already on a privacy page, extracting content directly...");
                             return document.body.innerText;
                         }
-
                         let privacyPolicyURL: string | any;
                         const links = document.querySelectorAll("a");
                         links.forEach((link) => {
@@ -230,19 +228,15 @@ export const extractTextFromPrivacyPage = async (): Promise<string | null> => {
                                 privacyPolicyURL = href;
                             }
                         });
-
                         console.log("Extracted Privacy Policy URL:", privacyPolicyURL);
-
                         if (!privacyPolicyURL) {
                             console.warn("No privacy policy link found.");
-                            return null; // Return null if no privacy link is found
+                            return null;
                         }
-
                         if (!privacyPolicyURL.startsWith("http")) {
                             const baseUrl = window.location.origin;
                             privacyPolicyURL = new URL(privacyPolicyURL, baseUrl).href;
                         }
-
                         return fetch(privacyPolicyURL)
                             .then((response) => {
                                 console.log("Fetch response:", response);
@@ -253,17 +247,16 @@ export const extractTextFromPrivacyPage = async (): Promise<string | null> => {
                             })
                             .then((pageText) => {
                                 console.log("Page text fetched:", pageText);
-
                                 const parsedDoc = new DOMParser().parseFromString(
                                     pageText,
                                     "text/html"
                                 );
-
-                                const scriptsAndStyles = parsedDoc.querySelectorAll("script, style");
+                                const scriptsAndStyles =
+                                    parsedDoc.querySelectorAll("script, style");
                                 scriptsAndStyles.forEach((el) => el.remove());
-
                                 const bodyText = parsedDoc.body.innerText;
                                 console.log("Extracted body text from privacy page:", bodyText);
+                                return bodyText;
                             })
                             .catch((error) => {
                                 console.error("Failed to fetch privacy policy page:", error);
@@ -276,13 +269,11 @@ export const extractTextFromPrivacyPage = async (): Promise<string | null> => {
                         reject("Failed to extract privacy policy page content.");
                         return;
                     }
-
                     const pageText = results[0].result;
                     if (!pageText) {
                         reject("Failed to fetch privacy policy page content.");
                         return;
                     }
-
                     resolve(pageText);
                 }
             );
