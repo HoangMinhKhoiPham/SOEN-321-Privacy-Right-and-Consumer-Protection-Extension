@@ -20,7 +20,7 @@ export const labels: Record<Category, string> = {
     optoutOption: "Opt-Out Options",
     dataSecurity: "Data Security",
     dataDeletion: "Data Deletion",
-    clarityPrivacy: "Policy Update",
+    clarityPrivacy: "Policy Clarity",
 };
 export const generatePrompt = (text: string) => `
   You are an assistant designed to analyze privacy policies. Analyze the following privacy policy text and provide a JSON output.
