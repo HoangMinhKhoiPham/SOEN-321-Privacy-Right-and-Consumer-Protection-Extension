@@ -1,14 +1,13 @@
 import { useState } from "react";
 import "./App.css";
 import {
-  categories,
-  labels,
   extractTextFromPrivacyPage,
   fetchApi,
   extractTextFromPrivacyUrl,
   IResponse,
 } from "./utils/apiUtils";
 
+import { categories, labels } from "./prompt/prompt";
 function App() {
   const [isScanning, setIsScanning] = useState(false);
   const [state, setState] = useState<
@@ -17,6 +16,7 @@ function App() {
   const [response, setResponse] = useState<IResponse | null>(null);
   const [url, setUrl] = useState("");
   const [activeTab, setActiveTab] = useState("scan");
+  const [total, setTotal] = useState<number | null>(null);
 
   const analyzeContent = async (getPageText: () => Promise<string | null>) => {
     setIsScanning(true);
@@ -34,6 +34,11 @@ function App() {
       if (parsedJson) {
         setResponse(parsedJson);
         setState("found");
+        const totalScore = categories.reduce(
+          (sum, category) => sum + parsedJson.scores[category],
+          0
+        );
+        setTotal(Math.ceil((totalScore / categories.length).toFixed(2) as unknown as number));
       } else {
         setState("error");
       }
@@ -76,7 +81,7 @@ function App() {
           </header>
 
           <div className="main-content">
-            {state === "found" && response !== null ? (
+            {state === "found" && response && total !== null ? (
               <div className="result-container">
                 <div className="top-metrics">
                   <div className="circle-metric">
@@ -84,14 +89,14 @@ function App() {
                       className="circle"
                       style={{
                         borderColor:
-                          response.summary?.overallScore <= 4
+                          total <= 4
                             ? "#f44336"
-                            : response.summary?.overallScore < 8
+                            : total < 8
                               ? "#ff9800"
                               : "#4caf50",
                       }}
                     >
-                      {response.summary?.overallScore} / 10
+                      {total} / 10
                     </div>
                     <div className="summary">
                       <p>
