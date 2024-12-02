@@ -96,7 +96,7 @@ function App() {
                               : "#4caf50",
                       }}
                     >
-                      {total} / 10
+                      <strong>{total}/10</strong>
                     </div>
                     <div className="summary">
                       <p>
@@ -170,7 +170,7 @@ function App() {
               <div>
                 {activeTab === "scan" && (
                   <button className="option-button" onClick={analyzePage}>
-                    Scan Current Page
+                    Analyze Current Page
                   </button>
                 )}
                 {activeTab === "url" && (
