@@ -17,6 +17,7 @@ function App() {
   const [url, setUrl] = useState("");
   const [activeTab, setActiveTab] = useState("scan");
   const [total, setTotal] = useState<number | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const analyzeContent = async (getPageText: () => Promise<string | null>) => {
     setIsScanning(true);
@@ -38,13 +39,23 @@ function App() {
           (sum, category) => sum + parsedJson.scores[category],
           0
         );
-        setTotal(Math.ceil((totalScore / categories.length).toFixed(2) as unknown as number));
+        setTotal(
+          Math.ceil(
+            (totalScore / categories.length).toFixed(2) as unknown as number
+          )
+        );
       } else {
         setState("error");
+        setErrorMessage(
+          "An unexpected error occurred. Please try again later."
+        );
       }
     } catch (error) {
       console.error("Error analyzing page:", error);
       setState("error");
+      console.log("ErrorMessage Set:", errorMessage); // Log right after setting
+
+      setErrorMessage("An unexpected error occurred. Please try again later.");
     } finally {
       setIsScanning(false);
     }
@@ -57,6 +68,8 @@ function App() {
   const analyzeUrl = async () => {
     if (!url) {
       setState("error");
+      setErrorMessage("An unexpected error occurred. Please try again later.");
+
       return;
     }
     await analyzeContent(() => extractTextFromPrivacyUrl(url));
@@ -71,16 +84,22 @@ function App() {
       ) : (
         <>
           <header className="header">
-            {state === "found" && response !== null && (
-              <button className="back-button" onClick={() => setState("")}>
-                ← Back
-              </button>
-            )}
+            {(state === "found" && response !== null) ||
+              (state === "error" && (
+                <button className="back-button" onClick={() => setState("")}>
+                  ← Back
+                </button>
+              ))}
             <h1>Policy Check Extension</h1>
             <p>Analyze privacy policies effortlessly!</p>
           </header>
 
           <div className="main-content">
+            {state === "error" && (
+              <div className="error-message">
+                <p>{errorMessage}</p>
+              </div>
+            )}
             {state === "found" && response && total !== null ? (
               <div className="result-container">
                 <div className="top-metrics">
@@ -92,8 +111,8 @@ function App() {
                           total <= 4
                             ? "#f44336"
                             : total < 8
-                              ? "#ff9800"
-                              : "#4caf50",
+                            ? "#ff9800"
+                            : "#4caf50",
                       }}
                     >
                       <strong>{total}/10</strong>
@@ -108,7 +127,9 @@ function App() {
                       </p>
                       <ul>
                         {response.summary?.pros?.map((pro, index) => (
-                          <li key={index}><p>{pro}</p></li>
+                          <li key={index}>
+                            <p>{pro}</p>
+                          </li>
                         ))}
                       </ul>
                       <p>
@@ -116,7 +137,9 @@ function App() {
                       </p>
                       <ul>
                         {response.summary?.cons?.map((con, index) => (
-                          <li key={index}><p>{con}</p></li>
+                          <li key={index}>
+                            <p>{con}</p>
+                          </li>
                         ))}
                       </ul>
                     </div>
@@ -132,8 +155,8 @@ function App() {
                           response.scores[category] <= 4
                             ? "#f44336"
                             : response.scores[category] < 8
-                              ? "#ff9800"
-                              : "#4caf50",
+                            ? "#ff9800"
+                            : "#4caf50",
                       }}
                     >
                       <div className="circle-metric">
@@ -144,8 +167,8 @@ function App() {
                               response.scores[category] <= 4
                                 ? "#f44336"
                                 : response.scores[category] < 8
-                                  ? "#ff9800"
-                                  : "#4caf50",
+                                ? "#ff9800"
+                                : "#4caf50",
                           }}
                         >
                           <span className="circle-text">
@@ -191,12 +214,10 @@ function App() {
             )}
           </div>
 
-          {state === "" && (
-            <nav className="bottom-nav">
-              <button onClick={() => setActiveTab("scan")}>🔍 Analyze</button>
-              <button onClick={() => setActiveTab("url")}>🌐 URL</button>
-            </nav>
-          )}
+          <nav className="bottom-nav">
+            <button onClick={() => setActiveTab("scan")}>🔍 Analyze</button>
+            <button onClick={() => setActiveTab("url")}>🌐 URL</button>
+          </nav>
         </>
       )}
     </div>

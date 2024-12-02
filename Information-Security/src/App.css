@@ -301,3 +301,13 @@ input[type="file"] {
   background-color: #bdc3c7;
   cursor: not-allowed;
 }
+
+.error-message {
+  color: black;
+  background-color: #ffe6e6;
+  padding: 10px;
+  border: 1px solid #f44336;
+  border-radius: 5px;
+  margin: 10px 0;
+  
+}
