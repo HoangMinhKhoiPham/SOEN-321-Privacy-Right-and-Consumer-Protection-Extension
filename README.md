@@ -2,7 +2,7 @@
 ## Project Description
 The SOEN-321 Privacy Right and Consumer Protection Extension is a Chrome extension that helps users quickly understand website privacy policies. It analyzes policies across eight key areas, like how data is collected, shared, and secured, and gives clear scores and summaries.
 
-Powered by the LLaMA3-8B-8192 AI model, the extension simplifies complex privacy policies, showing users what things like whether their data can be sold or deleted and if they have opt-out options.
+Powered by the LLaMA3-8B-8192 AI model, the extension simplifies complex privacy policies, showing users things like whether their data can be sold or deleted and if they have opt-out options.
 
 ## Demo
 place demo here
